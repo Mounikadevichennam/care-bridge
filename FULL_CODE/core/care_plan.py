@@ -65,11 +65,26 @@ class CarePlanProcessor:
         # 6. Build Patient-Friendly Daily Medication Schedule
         med_schedule = self._build_daily_schedule(data.medicines)
 
-        # 7. Format Response
+        # 7. Build Telugu Structured Care Plan Metadata
+        telugu_structured = self.telugu_engine.translate_structured(data)
+        telugu_structured["medication_schedule"] = self._build_daily_schedule_telugu(data.medicines)
+
+        # 8. Format Response & Ensure Dose / Dosage Key Preservation
+        formatted_meds = []
+        for m in data.medicines:
+            md = asdict(m)
+            actual_dose = (md.get("dose") or "").strip()
+            if not actual_dose:
+                actual_dose = "Dose not specified in discharge summary"
+            md["dose"] = actual_dose
+            md["dosage"] = actual_dose  # Backward compatibility alias
+            formatted_meds.append(md)
+
         return {
             "summary_id": summary_id,
-            "medicines": [asdict(m) for m in data.medicines],
+            "medicines": formatted_meds,
             "medication_schedule": med_schedule,
+            "telugu_structured": telugu_structured,
             "stop_medicines": data.stop_medicines,
             "warning_signs": data.warning_signs,
             "diet": data.diet,
@@ -182,3 +197,94 @@ class CarePlanProcessor:
 
         return schedule
 
+    def _build_daily_schedule_telugu(self, medicines: list) -> Dict[str, list]:
+        """Organize active medications into Telugu time-of-day slots strictly based on prescription facts."""
+        schedule = {
+            "morning": [],
+            "afternoon": [],
+            "night": [],
+            "as_needed": [],
+            "unspecified": []
+        }
+
+        for med in medicines:
+            freq = (med.frequency or "").lower()
+            timing = (med.timing or "").lower()
+            tel_freq = self.telugu_engine._translate_frequency(med.frequency)
+            tel_timing = self.telugu_engine._translate_timing(med.timing)
+            instr = f"{tel_freq}, {tel_timing}"
+
+            # Check SOS / PRN
+            if any(k in freq for k in ["sos", "prn", "as needed", "when required"]) or "sos" in timing:
+                schedule["as_needed"].append({
+                    "slot": "అవసరమైనప్పుడు (SOS)",
+                    "name": med.name,
+                    "dose": med.dose,
+                    "instruction": instr,
+                    "timing": "నొప్పి లేదా లక్షణాలు ఉన్నప్పుడు మాత్రమే"
+                })
+                continue
+
+            categorized = False
+
+            # Morning
+            is_morning = (
+                any(k in freq for k in ["1-0-1", "1-1-1", "1-0-0", "1-1-0", "bd", "bid", "twice daily", "tds", "tid", "thrice daily", "qid"]) or
+                any(k in timing for k in ["morning", "breakfast", "empty stomach", "mane", "am"])
+            )
+            if ("od" in freq or "once daily" in freq) and not any(k in freq for k in ["1-0-0", "1-1-0", "1-0-1", "1-1-1"]) and not any(k in timing for k in ["morning", "breakfast", "empty stomach", "mane", "am"]):
+                is_morning = False
+
+            if is_morning:
+                schedule["morning"].append({
+                    "slot": "ఉదయం (Morning)",
+                    "name": med.name,
+                    "dose": med.dose,
+                    "instruction": instr,
+                    "timing": f"ఉదయం {tel_timing}"
+                })
+                categorized = True
+
+            # Afternoon
+            is_afternoon = (
+                any(k in freq for k in ["1-1-1", "0-1-0", "1-1-0", "0-1-1", "tds", "tid", "thrice daily", "qid"]) or
+                any(k in timing for k in ["afternoon", "lunch", "midday"])
+            )
+            if is_afternoon:
+                schedule["afternoon"].append({
+                    "slot": "మధ్యాహ్నం (Afternoon)",
+                    "name": med.name,
+                    "dose": med.dose,
+                    "instruction": instr,
+                    "timing": f"మధ్యాహ్నం {tel_timing}"
+                })
+                categorized = True
+
+            # Night
+            is_night = (
+                any(k in freq for k in ["1-0-1", "1-1-1", "0-0-1", "0-1-1", "bd", "bid", "twice daily", "tds", "tid", "thrice daily", "qid", "hs", "bedtime"]) or
+                any(k in timing for k in ["night", "bedtime", "dinner", "evening", "hs", "nocte", "pm"])
+            )
+            if ("od" in freq or "once daily" in freq) and not any(k in freq for k in ["0-0-1", "0-1-1", "1-0-1", "1-1-1", "hs", "bedtime"]) and not any(k in timing for k in ["night", "bedtime", "dinner", "evening", "hs", "nocte", "pm"]):
+                is_night = False
+
+            if is_night:
+                schedule["night"].append({
+                    "slot": "రాత్రి (Night)",
+                    "name": med.name,
+                    "dose": med.dose,
+                    "instruction": instr,
+                    "timing": f"రాత్రి {tel_timing}"
+                })
+                categorized = True
+
+            if not categorized:
+                schedule["unspecified"].append({
+                    "slot": "సమయం పేర్కొనబడలేదు",
+                    "name": med.name,
+                    "dose": med.dose,
+                    "instruction": instr,
+                    "timing": "సమయం పేర్కొనబడలేదు – మీ వైద్యుడిని సంప్రదించండి."
+                })
+
+        return schedule

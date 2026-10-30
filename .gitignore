@@ -12,12 +12,31 @@ __pycache__/
 .env.*
 !.env.example
 
-# Temporary files
+# Databases
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Temporary files & logs
 *.log
+scratch/
 temp/
 tmp/
 uploads_temp/
 node_modules/
+*.bak
+*.swp
+*.tmp
+
+# IDE & OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.gemini/
+.agents/
 
 # Organizer dataset - never upload
 data/

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Dashboard — CareBridge AI Clinical Portal</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/doctor.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="doctor-portal-body">
+    <!-- Header Navigation -->
+    <header class="doc-header">
+        <div class="doc-nav-container">
+            <a href="/doctor/dashboard" class="doc-brand">
+                <div class="doc-brand-badge">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                        <path d="M12 5v14"/>
+                        <path d="M5 12h14"/>
+                    </svg>
+                    <span>CareBridge AI</span>
+                </div>
+                <div>
+                    <div class="doc-brand-title">Doctor Review Portal</div>
+                    <div class="doc-brand-subtitle">Clinical Verification & Chart Sign-Off</div>
+                </div>
+            </a>
+
+            <div class="doc-user-controls">
+                <div class="doc-profile-pill">
+                    <div class="doc-profile-avatar">{{ doctor.name[4] if doctor.name.startswith('Dr. ') else doctor.name[0] }}</div>
+                    <div>
+                        <div class="doc-profile-name">{{ doctor.name }}</div>
+                        <div class="doc-profile-license">{{ doctor.department }} | {{ doctor.license_number }}</div>
+                    </div>
+                </div>
+                <a href="/" class="btn-tool" style="text-decoration: none; font-size: 0.82rem; padding: 0.4rem 0.75rem;">
+                    Patient Portal &rarr;
+                </a>
+                <a href="/doctor/logout" class="btn-doc-logout">
+                    Logout
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="doc-main">
+        {% if message %}
+        <div class="alert-message alert-success" style="margin-bottom: 1.25rem;">
+            {{ message }}
+        </div>
+        {% endif %}
+
+        <!-- KPI Stats Cards -->
+        <section class="doc-stats-grid" aria-label="Clinical Queue Overview">
+            <div class="doc-stat-card stat-pending">
+                <div class="doc-stat-header">
+                    <span>Pending Reviews</span>
+                    <span>⏳</span>
+                </div>
+                <div class="doc-stat-value">{{ stats.pending_count }}</div>
+                <div class="doc-stat-desc">Care plans awaiting physician review</div>
+            </div>
+
+            <div class="doc-stat-card stat-approved">
+                <div class="doc-stat-header">
+                    <span>Approved Care Plans</span>
+                    <span>✅</span>
+                </div>
+                <div class="doc-stat-value">{{ stats.approved_count }}</div>
+                <div class="doc-stat-desc">Signed off for patient distribution</div>
+            </div>
+
+            <div class="doc-stat-card stat-changes">
+                <div class="doc-stat-header">
+                    <span>Changes Requested</span>
+                    <span>🛑</span>
+                </div>
+                <div class="doc-stat-value">{{ stats.changes_requested_count }}</div>
+                <div class="doc-stat-desc">Returned for clinical corrections</div>
+            </div>
+
+            <div class="doc-stat-card stat-total">
+                <div class="doc-stat-header">
+                    <span>Total Cases Managed</span>
+                    <span>📋</span>
+                </div>
+                <div class="doc-stat-value">{{ stats.total_cases }}</div>
+                <div class="doc-stat-desc">{{ stats.total_reviews }} total physician review actions</div>
+            </div>
+        </section>
+
+        <!-- Search & Filter Bar -->
+        <section class="doc-toolbar-card">
+            <form method="GET" action="/doctor/dashboard" class="doc-search-wrap">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #94a3b8;">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" name="q" class="doc-search-input" placeholder="Search by Case ID, Summary ID, Patient, or Diagnosis..." value="{{ search_query or '' }}">
+                <input type="hidden" name="status" value="{{ current_status or 'ALL' }}">
+                <button type="submit" class="btn btn-primary btn-sm" style="padding: 0.5rem 0.85rem;">Search</button>
+                {% if search_query or (current_status and current_status != 'ALL') %}
+                <a href="/doctor/dashboard" class="btn btn-outline btn-sm">Reset</a>
+                {% endif %}
+            </form>
+
+            <div class="doc-filter-group">
+                <label for="status-filter" style="font-size: 0.82rem; font-weight: 600; color: var(--doc-slate);">Filter Status:</label>
+                <select id="status-filter" class="doc-select" onchange="location = this.value;">
+                    <option value="/doctor/dashboard?status=ALL{% if search_query %}&q={{ search_query }}{% endif %}" {% if current_status == 'ALL' or not current_status %}selected{% endif %}>All Cases ({{ stats.total_cases }})</option>
+                    <option value="/doctor/dashboard?status=PENDING{% if search_query %}&q={{ search_query }}{% endif %}" {% if current_status == 'PENDING' %}selected{% endif %}>Pending Review ({{ stats.pending_count }})</option>
+                    <option value="/doctor/dashboard?status=APPROVED{% if search_query %}&q={{ search_query }}{% endif %}" {% if current_status == 'APPROVED' %}selected{% endif %}>Approved ({{ stats.approved_count }})</option>
+                    <option value="/doctor/dashboard?status=CHANGES_REQUESTED{% if search_query %}&q={{ search_query }}{% endif %}" {% if current_status == 'CHANGES_REQUESTED' %}selected{% endif %}>Changes Requested ({{ stats.changes_requested_count }})</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Cases Queue Table -->
+        <section class="doc-table-card">
+            <div class="doc-table-header">
+                <h2 class="doc-table-title">Clinical Review Queue ({{ total_cases }} Cases)</h2>
+                <span class="text-muted text-sm">Organized strictly by patient safety priority</span>
+            </div>
+
+            <div class="doc-table-responsive">
+                <table class="doc-table">
+                    <thead>
+                        <tr>
+                            <th>Case ID</th>
+                            <th>Summary ID / Patient</th>
+                            <th>Diagnosis / Condition</th>
+                            <th>Plan Version</th>
+                            <th>Grounding Audit</th>
+                            <th>Doctor Review Status</th>
+                            <th>Last Updated</th>
+                            <th style="text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if cases %}
+                            {% for c in cases %}
+                            <tr>
+                                <td>
+                                    <strong style="color: var(--doc-teal); font-family: monospace; font-size: 0.95rem;">{{ c.id }}</strong>
+                                </td>
+                                <td>
+                                    <div><strong>{{ c.patient_name or 'Unspecified Patient' }}</strong></div>
+                                    <div class="text-muted text-xs">{{ c.summary_id }}</div>
+                                </td>
+                                <td>
+                                    <span style="font-size: 0.85rem;">{{ c.condition_summary or 'General Medical Care' }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge badge-outline">v{{ c.current_version }}</span>
+                                </td>
+                                <td>
+                                    {% if c.status == 'APPROVED' and c.validation_status == 'NEEDS_REVIEW' %}
+                                        <span class="badge badge-pass" title="Physician has examined and certified all clinical instructions">FLAGGED — ACKNOWLEDGED</span>
+                                    {% elif c.validation_status == 'PASS' %}
+                                        <span class="badge badge-pass">PASS</span>
+                                    {% elif c.validation_status == 'FAIL' %}
+                                        <span class="badge badge-fail">FAIL</span>
+                                    {% else %}
+                                        <span class="badge badge-review">NEEDS REVIEW</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if c.status == 'APPROVED' %}
+                                        <span class="badge-status status-approved">✓ APPROVED</span>
+                                    {% elif c.status == 'CHANGES_REQUESTED' %}
+                                        <span class="badge-status status-changes">⚠️ CHANGES REQUESTED</span>
+                                    {% else %}
+                                        <span class="badge-status status-pending">⏳ PENDING REVIEW</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="text-muted text-xs">{{ c.updated_at[:16].replace('T', ' ') }} UTC</span>
+                                </td>
+                                <td style="text-align: right;">
+                                    <a href="/doctor/case/{{ c.id }}" class="btn-action-review">
+                                        Review Case &rarr;
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 2.5rem; color: #64748b;">
+                                    No cases found matching your criteria. Process a new discharge note in the Patient Portal to add to this queue.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Recent Audit Activity -->
+        <section class="doc-table-card">
+            <div class="doc-table-header">
+                <h3 class="doc-table-title">Recent Clinical Review Activity (Audit Log)</h3>
+                <span class="text-muted text-xs">Immutable cryptographically signed clinical activity</span>
+            </div>
+            <div class="doc-table-responsive">
+                <table class="doc-table" style="font-size: 0.82rem;">
+                    <thead>
+                        <tr>
+                            <th>Time (UTC)</th>
+                            <th>Case Reference</th>
+                            <th>Physician</th>
+                            <th>Action</th>
+                            <th>Clinical Notes / Comments</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if stats.recent_reviews %}
+                            {% for r in stats.recent_reviews %}
+                            <tr>
+                                <td class="text-muted" style="white-space: nowrap;">{{ r.created_at[:19].replace('T', ' ') }}</td>
+                                <td>
+                                    <a href="/doctor/case/{{ r.case_id }}" style="color: var(--doc-teal); font-weight: 600; text-decoration: none;">
+                                        {{ r.case_id }}
+                                    </a>
+                                </td>
+                                <td><strong>{{ r.doctor_name }}</strong></td>
+                                <td>
+                                    {% if r.action == 'APPROVE' %}
+                                        <span class="badge badge-pass">APPROVED (v{{ r.version_reviewed }})</span>
+                                    {% else %}
+                                        <span class="badge badge-fail">CHANGES REQUESTED (v{{ r.version_reviewed }})</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-slate">{{ r.comments or 'No notes recorded.' }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted" style="padding: 1.5rem;">
+                                    No review activity recorded yet.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

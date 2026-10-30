@@ -51,12 +51,13 @@ class DateParser:
             except ValueError:
                 pass
 
-        # 2. DD-Mon-YYYY or DD Mon YYYY (e.g., 04-Nov-2024, 11-Nov-2024, 15 Jan 2026)
-        mon_dmy = re.search(r'\b(0?[1-9]|[12]\d|3[01])[-/\s]([A-Za-z]{3,})[-/\s](20\d\d)\b', text)
+        # 2. DD-Mon-YYYY or DD-Mon-YY or DD Mon YYYY or ordinal (e.g. 17th September 2026, 01-May-26, 04-Nov-2024)
+        mon_dmy = re.search(r'\b(0?[1-9]|[12]\d|3[01])(?:st|nd|rd|th)?[-/\s]+([A-Za-z]{3,})[-/\s]+(20\d\d|\d{2})\b', text)
         if mon_dmy:
             d = int(mon_dmy.group(1))
             m_str = mon_dmy.group(2).lower()[:3]
-            y = int(mon_dmy.group(3))
+            y_str = mon_dmy.group(3)
+            y = int(y_str) if len(y_str) == 4 else 2000 + int(y_str)
             if m_str in MONTH_MAP:
                 try:
                     return datetime.date(y, MONTH_MAP[m_str], d).isoformat()
@@ -64,21 +65,25 @@ class DateParser:
                     pass
 
         # 3. Mon-DD-YYYY or Month DD, YYYY (e.g., Nov 04 2024, January 15, 2026)
-        mon_mdy = re.search(r'\b([A-Za-z]{3,})[-/\s](0?[1-9]|[12]\d|3[01])(?:st|nd|rd|th)?[,\s]+(20\d\d)\b', text)
+        mon_mdy = re.search(r'\b([A-Za-z]{3,})\s+(0?[1-9]|[12]\d|3[01])(?:st|nd|rd|th)?[,\s]+(20\d\d|\d{2})\b', text)
         if mon_mdy:
             m_str = mon_mdy.group(1).lower()[:3]
             d = int(mon_mdy.group(2))
-            y = int(mon_mdy.group(3))
+            y_str = mon_mdy.group(3)
+            y = int(y_str) if len(y_str) == 4 else 2000 + int(y_str)
             if m_str in MONTH_MAP:
                 try:
                     return datetime.date(y, MONTH_MAP[m_str], d).isoformat()
                 except ValueError:
                     pass
 
-        # 4. DD/MM/YYYY or DD-MM-YYYY (numeric month)
-        dmy_match = re.search(r'\b(0?[1-9]|[12]\d|3[01])[-/.](0?[1-9]|1[0-2])[-/.](20\d\d)\b', text)
+        # 4. DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY (supports 2-digit years)
+        dmy_match = re.search(r'\b(0?[1-9]|[12]\d|3[01])[-/.](0?[1-9]|1[0-2])[-/.](20\d\d|\d{2})\b', text)
         if dmy_match:
-            d, m, y = int(dmy_match.group(1)), int(dmy_match.group(2)), int(dmy_match.group(3))
+            d = int(dmy_match.group(1))
+            m = int(dmy_match.group(2))
+            y_str = dmy_match.group(3)
+            y = int(y_str) if len(y_str) == 4 else 2000 + int(y_str)
             try:
                 return datetime.date(y, m, d).isoformat()
             except ValueError:

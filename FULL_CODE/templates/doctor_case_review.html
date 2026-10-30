@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Case {{ case.id }} — CareBridge AI Doctor Portal</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/doctor.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        .tabs-nav {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 2px solid var(--doc-border);
+            margin-bottom: 1rem;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 0.5rem 1rem;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--doc-slate);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+        .tab-btn.active {
+            color: var(--doc-teal);
+            border-bottom-color: var(--doc-teal);
+        }
+        .tab-pane {
+            display: none;
+        }
+        .tab-pane.active {
+            display: block;
+        }
+        .stamp-approved-box {
+            background: #f0fdf4;
+            border: 2px solid #86efac;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .stamp-changes-box {
+            background: #fef2f2;
+            border: 2px solid #fca5a5;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+    </style>
+</head>
+<body class="doctor-portal-body">
+    <!-- Header Navigation -->
+    <header class="doc-header">
+        <div class="doc-nav-container">
+            <a href="/doctor/dashboard" class="doc-brand">
+                <div class="doc-brand-badge">
+                    <span>CareBridge AI</span>
+                </div>
+                <div>
+                    <div class="doc-brand-title">Doctor Review Portal</div>
+                    <div class="doc-brand-subtitle">Clinical Verification &amp; Chart Sign-Off</div>
+                </div>
+            </a>
+
+            <div class="doc-user-controls">
+                <div class="doc-profile-pill">
+                    <div class="doc-profile-avatar">{{ doctor.name[4] if doctor.name.startswith('Dr. ') else doctor.name[0] }}</div>
+                    <div>
+                        <div class="doc-profile-name">{{ doctor.name }}</div>
+                        <div class="doc-profile-license">{{ doctor.department }}</div>
+                    </div>
+                </div>
+                <a href="/doctor/dashboard" class="btn btn-outline btn-sm">
+                    &larr; Back to Dashboard
+                </a>
+                <a href="/doctor/logout" class="btn-doc-logout">
+                    Logout
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="doc-main">
+        <!-- Breadcrumb & Case Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <a href="/doctor/dashboard" style="color: var(--doc-teal); font-size: 0.85rem; text-decoration: none; font-weight: 600;">&larr; Review Queue</a>
+                <h1 style="font-size: 1.6rem; font-weight: 700; margin: 0.25rem 0 0.15rem 0;">
+                    Case Review: <span style="font-family: monospace; color: var(--doc-teal);">{{ case.id }}</span>
+                    <span style="font-size: 0.95rem; font-weight: 500; color: #64748b;">(Ref: {{ case.summary_id }})</span>
+                </h1>
+                <p class="text-muted text-sm" style="margin: 0;">
+                    Patient: <strong>{{ case.patient_name or 'Not explicitly identified' }}</strong> | Condition: <strong>{{ case.condition_summary or 'Clinical Care' }}</strong> | Care Plan Version: <strong>v{{ case.current_version }}</strong>
+                </p>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                {% if case.status == 'APPROVED' %}
+                    <span class="badge-status status-approved" style="font-size: 0.9rem; padding: 0.4rem 1rem;">
+                        ✓ CERTIFIED APPROVED
+                    </span>
+                {% elif case.status == 'CHANGES_REQUESTED' %}
+                    <span class="badge-status status-changes" style="font-size: 0.9rem; padding: 0.4rem 1rem;">
+                        ⚠️ CHANGES REQUESTED
+                    </span>
+                {% else %}
+                    <span class="badge-status status-pending" style="font-size: 0.9rem; padding: 0.4rem 1rem;">
+                        ⏳ AWAITING DOCTOR REVIEW
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Approval / Correction Alerts if already reviewed -->
+        {% if case.approval_info and case.status == 'APPROVED' %}
+        <div class="stamp-approved-box">
+            <div style="font-size: 2rem;">🛡️</div>
+            <div>
+                <div style="font-weight: 700; color: #166534; font-size: 1.05rem;">
+                    Clinically Approved for Patient Distribution
+                </div>
+                <div style="font-size: 0.88rem; color: #14532d; margin-top: 0.2rem;">
+                    Certified by <strong>{{ case.approval_info.doctor_name }}</strong> (License: <code>{{ case.approval_info.doctor_license }}</code>) on <strong>{{ case.approval_info.created_at[:19].replace('T', ' ') }} UTC</strong>.
+                    {% if case.approval_info.comments %}
+                    <div style="margin-top: 0.35rem; font-style: italic;">"{{ case.approval_info.comments }}"</div>
+                    {% endif %}
+                </div>
+                <div style="margin-top: 0.65rem;">
+                    <a href="/?case_id={{ case.id }}" target="_blank" class="btn btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; background: #166534; color: #fff;">
+                        <span>View Approved Patient Care Plan &rarr;</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% elif case.latest_change_request and case.status == 'CHANGES_REQUESTED' %}
+        <div class="stamp-changes-box">
+            <div style="font-weight: 700; color: #991b1b; font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>⚠️ Clinical Corrections Requested</span>
+                <span class="text-xs text-muted" style="font-weight: normal;">({{ case.latest_change_request.created_at[:19].replace('T', ' ') }} UTC)</span>
+            </div>
+            <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #7f1d1d; background: #ffffff; padding: 0.75rem; border-radius: 6px; border: 1px solid #fecaca;">
+                <strong>Physician Note from {{ case.latest_change_request.doctor_name }}:</strong><br>
+                {{ case.latest_change_request.comments }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="alert-message alert-error">
+            <strong>Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+
+        {% if success_msg %}
+        <div class="alert-message alert-success">
+            <strong>Success:</strong> {{ success_msg }}
+        </div>
+        {% endif %}
+
+        <!-- Side-by-Side Split View Comparison -->
+        <div class="case-review-container">
+            <!-- LEFT PANEL: Original Verbatim Discharge Note -->
+            <section class="review-panel" aria-label="Original Discharge Note">
+                <div class="review-panel-header">
+                    <div class="review-panel-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                        </svg>
+                        <span>Original Hospital Discharge Summary (Source Document)</span>
+                    </div>
+                    <span class="badge badge-outline">Verbatim Clinical Record</span>
+                </div>
+                <div class="review-panel-body">
+                    <p class="text-xs text-muted" style="margin-top: 0; margin-bottom: 0.75rem;">
+                        Verify that all prescribed medications, dosages, intervals, and discontinued drugs in this clinical note match the generated plan on the right.
+                    </p>
+                    <pre class="raw-text-box">{{ case.original_text }}</pre>
+                </div>
+            </section>
+
+            <!-- RIGHT PANEL: Generated Care Plan & Clinical Extraction -->
+            <section class="review-panel" aria-label="Generated Patient Care Plan">
+                <div class="review-panel-header">
+                    <div class="review-panel-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                        <span>Generated Patient Care Plan (v{{ case.current_version }})</span>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        {% if case.status == 'APPROVED' and case.care_plan_version and case.care_plan_version.validation_status == 'NEEDS_REVIEW' %}
+                            <span class="badge badge-pass" title="Doctor reviewed and certified extraction">Audit: FLAGGED — ACKNOWLEDGED</span>
+                        {% else %}
+                            <span class="badge {% if case.care_plan_version and case.care_plan_version.validation_status == 'PASS' %}badge-pass{% elif case.care_plan_version and case.care_plan_version.validation_status == 'FAIL' %}badge-fail{% else %}badge-review{% endif %}">
+                                Audit: {{ case.care_plan_version.validation_status if case.care_plan_version else 'N/A' }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="review-panel-body">
+                    <!-- Tab Navigation -->
+                    <div class="tabs-nav" role="tablist">
+                        <button class="tab-btn active" onclick="switchTab('tab-structured')">Structured Facts</button>
+                        <button class="tab-btn" onclick="switchTab('tab-english')">English Plan</button>
+                        <button class="tab-btn" onclick="switchTab('tab-telugu')">Telugu Plan</button>
+                        <button class="tab-btn" onclick="switchTab('tab-audit')">Faithfulness Audit</button>
+                    </div>
+
+                    <!-- Tab 1: Structured Clinical Facts -->
+                    <div id="tab-structured" class="tab-pane active">
+                        {% if case.care_plan_data %}
+                            <!-- Active Medicines -->
+                            <h4 style="font-size: 0.95rem; font-weight: 700; margin: 0.75rem 0 0.5rem 0; color: var(--doc-navy);">
+                                Active Prescribed Medications ({{ case.care_plan_data.medicines | length }} items)
+                            </h4>
+                            <div class="table-responsive">
+                                <table class="doc-table" style="font-size: 0.82rem;">
+                                    <thead>
+                                        <tr>
+                                            <th>Medicine</th>
+                                            <th>Dose</th>
+                                            <th>Frequency</th>
+                                            <th>Timing</th>
+                                            <th>Duration</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for m in case.care_plan_data.medicines %}
+                                        <tr>
+                                            <td><strong>{{ m.name }}</strong></td>
+                                            <td><span class="badge badge-dose">{{ m.dose }}</span></td>
+                                            <td>{{ m.frequency }}</td>
+                                            <td>{{ m.timing }}</td>
+                                            <td>{{ m.duration }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Discontinued Medicines -->
+                            <h4 style="font-size: 0.95rem; font-weight: 700; margin: 1.25rem 0 0.5rem 0; color: var(--doc-red);">
+                                Discontinued / Stopped Medications ({{ case.care_plan_data.stop_medicines | length }} items)
+                            </h4>
+                            {% if case.care_plan_data.stop_medicines %}
+                                <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                                    {% for sm in case.care_plan_data.stop_medicines %}
+                                    <div class="stop-pill" style="font-size: 0.82rem;">
+                                        <strong>STOP: {{ sm.name if sm.name is defined else sm }}</strong>
+                                        {% if sm.reason is defined %}<span>({{ sm.reason }})</span>{% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted text-xs">No discontinued medications specified in discharge note.</p>
+                            {% endif %}
+
+                            <!-- Follow-ups -->
+                            <h4 style="font-size: 0.95rem; font-weight: 700; margin: 1.25rem 0 0.5rem 0; color: var(--doc-teal);">
+                                Scheduled Follow-up Review
+                            </h4>
+                            {% if case.care_plan_data.follow_ups %}
+                                <ul class="styled-list text-xs">
+                                    {% for fu in case.care_plan_data.follow_ups %}
+                                    <li>📅 <strong>{{ fu.date }}</strong> with {{ fu.with_whom }} — <em>{{ fu.purpose }}</em></li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="text-muted text-xs">Not specified in discharge summary.</p>
+                            {% endif %}
+
+                            <!-- Warning signs, Diet, Activity -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                                <div>
+                                    <h5 style="margin: 0 0 0.35rem 0; font-size: 0.85rem; color: #b91c1c;">Emergency Warning Signs:</h5>
+                                    <ul class="styled-list text-xs" style="margin: 0; padding-left: 1rem;">
+                                        {% for w in case.care_plan_data.warning_signs %}
+                                        <li>{{ w }}</li>
+                                        {% else %}
+                                        <li class="text-muted">Not specified in discharge summary.</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h5 style="margin: 0 0 0.35rem 0; font-size: 0.85rem; color: #0f766e;">Diet &amp; Activity:</h5>
+                                    <ul class="styled-list text-xs" style="margin: 0; padding-left: 1rem;">
+                                        {% for d in case.care_plan_data.diet %}
+                                        <li>{{ d }}</li>
+                                        {% endfor %}
+                                        {% for a in case.care_plan_data.activity %}
+                                        <li>{{ a }}</li>
+                                        {% endfor %}
+                                        {% if not case.care_plan_data.diet and not case.care_plan_data.activity %}
+                                        <li class="text-muted">Not specified in discharge summary.</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No structured care plan version found for this case.</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Tab 2: English Patient Narrative -->
+                    <div id="tab-english" class="tab-pane">
+                        <pre class="care-plan-text" style="font-size: 0.85rem; max-height: 520px; overflow-y: auto;">{{ case.care_plan_version.english_plan if case.care_plan_version else '' }}</pre>
+                    </div>
+
+                    <!-- Tab 3: Telugu Translation Plan -->
+                    <div id="tab-telugu" class="tab-pane">
+                        <pre class="care-plan-text telugu-text" style="font-size: 0.9rem; max-height: 520px; overflow-y: auto;">{{ case.care_plan_version.telugu_plan if case.care_plan_version else '' }}</pre>
+                    </div>
+
+                    <!-- Tab 4: Faithfulness Audit Table -->
+                    <div id="tab-audit" class="tab-pane">
+                        {% if case.care_plan_data and case.care_plan_data.validation and case.care_plan_data.validation['items'] %}
+                        <table class="doc-table" style="font-size: 0.8rem;">
+                            <thead>
+                                <tr>
+                                    <th>Audit Check</th>
+                                    <th>Status</th>
+                                    <th>Clinical Explanation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in case.care_plan_data.validation['items'] %}
+                                <tr>
+                                    <td><strong>{{ item.check_name }}</strong></td>
+                                    <td>
+                                        <span class="badge {% if item.status == 'PASS' %}badge-pass{% elif item.status == 'FAIL' %}badge-fail{% else %}badge-review{% endif %}">
+                                            {{ item.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ item.explanation }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <p class="text-muted text-xs">No automated validation items available.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Doctor Decision & Chart Sign-Off Section -->
+        <section class="doc-decision-card">
+            <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0 0 0.5rem 0;">
+                Physician Clinical Decision &amp; Chart Sign-Off
+            </h3>
+            <p class="text-sm text-muted" style="margin: 0 0 1.25rem 0;">
+                Doctor: <strong>{{ doctor.name }}</strong> (License: <code>{{ doctor.license_number }}</code>, Dept: <code>{{ doctor.department }}</code>).
+                All decisions are logged cryptographically to the hospital audit trail.
+            </p>
+
+            <form method="POST" action="/doctor/case/{{ case.id }}/review">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-field">
+                    <label for="doctor-comments">
+                        Clinical Review Comments &amp; Feedback
+                        <span class="text-muted text-xs">(Required if requesting corrections; optional for approval)</span>
+                    </label>
+                    <textarea id="doctor-comments" name="comments" rows="3" class="form-control-input" placeholder="Enter clinical notes, correction instructions, or approval verification rationale..."></textarea>
+                </div>
+
+                <div class="decision-actions-row">
+                    <!-- Approve Button -->
+                    <button type="submit" name="action" value="APPROVE" class="btn-approve" onclick="return confirm('Confirm Approval: You are certifying that this care plan faithfully reflects the hospital discharge summary and is approved for patient release.');">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        <span>Approve Care Plan for Patient</span>
+                    </button>
+
+                    <!-- Request Changes Button -->
+                    <button type="submit" name="action" value="REQUEST_CHANGES" class="btn-request-changes" onclick="return validateChangesRequest();">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                        <span>Request Corrections (Return to Draft)</span>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Clinical Revision & Resubmission Section (Creates Version v+1) -->
+        <section class="doc-table-card" style="margin-top: 1.5rem;">
+            <div class="doc-table-header flex-between" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 class="doc-table-title" style="margin: 0;">Edit &amp; Resubmit Revised Discharge Note</h3>
+                    <p class="text-xs text-muted" style="margin: 0.25rem 0 0 0;">
+                        Modify clinical instructions or discharge text to generate a new care plan version. Status will reset to PENDING and require fresh physician sign-off.
+                    </p>
+                </div>
+                <span class="badge badge-accent">Version Control: v{{ case.current_version }} &rarr; v{{ case.current_version + 1 }}</span>
+            </div>
+            <div style="padding: 1.25rem;">
+                <form method="POST" action="/doctor/case/{{ case.id }}/resubmit">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-field" style="margin-bottom: 0.75rem;">
+                        <label for="revised-text" style="font-weight: 600; font-size: 0.85rem;">Updated Clinical Discharge Summary Text:</label>
+                        <textarea id="revised-text" name="revised_text" rows="8" class="form-control-input" style="font-family: monospace; font-size: 0.85rem;" required>{{ case.original_text }}</textarea>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Resubmit: This will generate care plan version v{{ case.current_version + 1 }} and reset status to PENDING.');">
+                            <span>Resubmit Revised Summary (Generate v{{ case.current_version + 1 }}) &rarr;</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- Previous Review Audit History for this Case -->
+        <section class="doc-table-card">
+            <div class="doc-table-header">
+                <h3 class="doc-table-title">Case Review History &amp; Audit Trail</h3>
+                <span class="text-muted text-xs">Immutable Record for Case {{ case.id }}</span>
+            </div>
+            <div class="doc-table-responsive">
+                <table class="doc-table" style="font-size: 0.82rem;">
+                    <thead>
+                        <tr>
+                            <th>Time (UTC)</th>
+                            <th>Version</th>
+                            <th>Doctor Identity</th>
+                            <th>License</th>
+                            <th>Decision</th>
+                            <th>Clinical Comments</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if case.reviews %}
+                            {% for rev in case.reviews %}
+                            <tr>
+                                <td class="text-muted" style="white-space: nowrap;">{{ rev.created_at[:19].replace('T', ' ') }}</td>
+                                <td>v{{ rev.version_reviewed }}</td>
+                                <td><strong>{{ rev.doctor_name }}</strong></td>
+                                <td><code>{{ rev.doctor_license }}</code></td>
+                                <td>
+                                    {% if rev.action == 'APPROVE' %}
+                                        <span class="badge badge-pass">APPROVED</span>
+                                    {% else %}
+                                        <span class="badge badge-fail">CHANGES REQUESTED</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ rev.comments or 'No notes recorded.' }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted" style="padding: 1.5rem;">
+                                    No physician reviews submitted for this case yet.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            event.target.classList.add('active');
+            const targetPane = document.getElementById(tabId);
+            if (targetPane) targetPane.classList.add('active');
+        }
+
+        function validateChangesRequest() {
+            const comments = document.getElementById('doctor-comments').value.trim();
+            if (!comments) {
+                alert('Please enter specific clinical review comments explaining what corrections are required.');
+                document.getElementById('doctor-comments').focus();
+                return false;
+            }
+            return confirm('Request Changes: This case will be returned for revision with your clinical comments.');
+        }
+    </script>
+</body>
+</html>

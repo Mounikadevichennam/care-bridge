@@ -13,6 +13,7 @@
     <!-- Top Navigation Header -->
     <header class="app-header">
         <div class="container header-container">
+
             <div class="brand">
                 <div class="brand-logo" aria-hidden="true">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -30,6 +31,10 @@
             <!-- Header Quick Tools & Accessibility Controls -->
             <div class="header-controls">
                 <div class="accessibility-bar" role="group" aria-label="Accessibility options">
+                    <div class="lang-switch-group" role="group" aria-label="Care plan language">
+                        <button id="btn-header-lang-en" class="btn-tool active" title="Switch view to English">English</button>
+                        <button id="btn-header-lang-te" class="btn-tool" title="తెలుగులోకి మార్చండి">తెలుగు</button>
+                    </div>
                     <button id="btn-toggle-large-text" class="btn-tool" title="Toggle Large Text Mode (A+)" aria-label="Toggle Large Text">
                         <strong>A+</strong> Large Text
                     </button>
@@ -41,6 +46,10 @@
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         Family View
                     </button>
+                    <a href="/doctor/dashboard" class="btn-tool btn-tool-doctor" title="Open Doctor Clinical Portal" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; background: var(--teal); color: #ffffff; font-weight: 600;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                        <span>Doctor Portal</span>
+                    </a>
                 </div>
                 <div class="header-badges">
                     <span class="badge badge-accent">TalentAP Mega Hackathon 2026 | H2</span>
@@ -60,22 +69,6 @@
             <div>
                 <strong>Faithfulness-First Clinical Assistance Tool:</strong>
                 CareBridge AI translates hospital discharge instructions faithfully into everyday language without altering prescribed doses, frequencies, or dates. It does not replace professional clinical judgment. Always consult your attending doctor for emergency medical conditions.
-            </div>
-        </div>
-
-        <!-- Doctor Review Workflow Bar -->
-        <div class="doctor-workflow-bar">
-            <div class="workflow-left">
-                <span class="workflow-label">Physician Chart Sign-Off:</span>
-                <span id="workflow-badge" class="badge badge-draft">Doctor Review: PENDING</span>
-                <span class="text-sm text-muted">| Clinical protocol requires physician sign-off before formal care plan distribution.</span>
-            </div>
-            <div class="workflow-actions">
-                <select id="workflow-status-select" class="form-select form-select-sm" aria-label="Select Clinical Review State">
-                    <option value="pending" selected>State: Review PENDING</option>
-                    <option value="changes_requested">State: CHANGES REQUESTED</option>
-                    <option value="approved">State: APPROVED by Doctor</option>
-                </select>
             </div>
         </div>
     </div>
@@ -171,6 +164,79 @@
             </div>
         </div>
 
+        <!-- Pending Doctor Review Modal -->
+        <div id="pending-review-modal" class="ocr-modal hidden" role="dialog" aria-modal="true" aria-labelledby="pending-modal-title">
+            <div class="ocr-modal-content card" style="max-width: 560px; text-align: center; padding: 2rem 1.5rem;">
+                <div style="font-size: 3rem; margin-bottom: 0.5rem;">📤</div>
+                <h3 id="pending-modal-title" style="font-size: 1.35rem; font-weight: 700; margin-bottom: 0.5rem;">Your Care Plan Has Been Sent to the Doctor</h3>
+                <p id="pending-modal-msg" class="text-sm text-muted" style="margin-bottom: 1rem;">
+                    Your discharge summary has been processed successfully. The care plan is now waiting for physician review. You will see an update here after the doctor completes the review.
+                </p>
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <span class="text-xs text-muted" style="display: block;">Case Reference:</span>
+                        <strong id="modal-pending-case-id" style="font-family: monospace; font-size: 1.1rem; color: var(--teal);">CB-PENDING</strong>
+                    </div>
+                    <div>
+                        <span class="text-xs text-muted" style="display: block;">Status:</span>
+                        <span class="badge badge-draft" id="modal-pending-status">PENDING DOCTOR REVIEW</span>
+                    </div>
+                </div>
+                <div class="safety-banner" style="text-align: left; margin-bottom: 1.5rem; font-size: 0.88rem;">
+                    <strong>Mandatory Clinical Protocol:</strong> CareBridge AI strictly enforces physician chart review. All generated care plans must be certified by an attending doctor before patient distribution.
+                </div>
+                <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                    <button id="btn-view-notif-history" class="btn btn-primary" type="button" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        <span>View Notification History</span>
+                    </button>
+                    <a id="btn-proceed-doctor-login" href="/doctor/login" class="btn btn-secondary" target="_blank" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                        <span>Open Doctor Portal &rarr;</span>
+                    </a>
+                    <button id="btn-close-pending-modal" class="btn btn-outline" type="button">Stay on Page</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Patient Notifications & Case Activity History -->
+        <section id="patient-notifications-section" class="card notifications-card" aria-labelledby="notifications-heading" style="margin-top: 1.5rem;">
+            <div class="card-header flex-between">
+                <div>
+                    <h2 id="notifications-heading" style="display: flex; align-items: center; gap: 0.5rem; margin: 0; font-size: 1.25rem;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--teal);">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                        <span id="notif-section-title">Care Plan Updates & Notifications</span>
+                    </h2>
+                    <p id="notif-section-subtitle" class="text-muted text-sm" style="margin: 0.25rem 0 0 0;">
+                        Chronological record of care plan submissions, physician reviews, and clinical approvals.
+                    </p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span id="notifications-count-badge" class="badge badge-accent">0 Updates</span>
+                    <button id="btn-refresh-notifications" class="btn btn-outline btn-sm" title="Check for doctor review updates">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                        </svg>
+                        <span id="btn-refresh-notif-label">Check Updates</span>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="notifications-list" class="notifications-list">
+                    <!-- Populated dynamically via app.js -->
+                    <div id="notifications-empty-state" class="notifications-empty" style="text-align: center; padding: 2rem 1rem; color: #64748b;">
+                        <div style="font-size: 2.25rem; margin-bottom: 0.5rem;">📋</div>
+                        <h4 id="notif-empty-title" style="margin: 0 0 0.35rem 0; font-size: 1.05rem; color: var(--navy);">No Case Activity Yet</h4>
+                        <p id="notif-empty-desc" class="text-sm text-muted" style="margin: 0;">
+                            Select or upload a discharge summary above and click "Convert to Patient Care Plan" to initiate physician review.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Processing Loading Indicator -->
         <div id="loading-spinner" class="loading-container hidden" aria-live="polite">
             <div class="spinner"></div>
@@ -179,6 +245,27 @@
 
         <!-- Results Area Container -->
         <div id="results-area" class="results-area hidden">
+            <!-- Language Switcher & Quick Direct Download Toolbar -->
+            <div class="results-action-toolbar card">
+                <div class="toolbar-lang-col">
+                    <span class="toolbar-label">🌐 Plan Language:</span>
+                    <div class="language-pill-toggle" role="group" aria-label="Care plan language">
+                        <button id="btn-view-lang-en" class="btn-pill active" title="View care plan in English">🇬🇧 English</button>
+                        <button id="btn-view-lang-te" class="btn-pill" title="తెలుగులో చూడండి">🇮🇳 తెలుగు (Telugu)</button>
+                    </div>
+                </div>
+                <div class="toolbar-export-col">
+                    <button id="btn-quick-download-pdf" class="btn btn-primary btn-sm" title="Download direct formatted A4 PDF file (No print dialog)">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span id="quick-pdf-label">Download PDF</span>
+                    </button>
+                    <button id="btn-quick-download-image" class="btn btn-secondary btn-sm" title="Download direct high-resolution PNG image">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                        <span id="quick-img-label">Download Image (PNG)</span>
+                    </button>
+                </div>
+            </div>
+
             <!-- Decoupled Verification & Clinical Review Status Banner -->
             <section class="patient-verification-card" aria-live="polite">
                 <div class="verification-content-wrapper">
@@ -189,6 +276,7 @@
                         <div class="verification-badge-row">
                             <span id="patient-status-title" class="status-main-text">TECHNICAL VALIDATION: PASS</span>
                             <span id="tech-validation-tag" class="verification-tag">Clinical Grounding Audit</span>
+                            <span id="patient-case-badge" class="badge badge-outline" style="margin-left: 0.5rem;">Case Ref: <strong id="case-id-display">Unassigned</strong></span>
                             <span id="doctor-review-badge-status" class="badge badge-draft" style="margin-left: auto;">Doctor Review: PENDING</span>
                         </div>
                         <p id="patient-status-desc" class="verification-sub-text">
@@ -196,6 +284,9 @@
                         </p>
                     </div>
                 </div>
+
+                <!-- Doctor Review Feedback Banner -->
+                <div id="doctor-feedback-banner" class="hidden" style="margin-top: 0.75rem; padding: 0.75rem 1rem; border-radius: 6px; font-size: 0.88rem;"></div>
 
                 <!-- Faithfulness Checklist Indicators -->
                 <div class="faithfulness-checks-summary">
@@ -295,16 +386,68 @@
                             <div id="slot-unspecified-items" class="slot-items"></div>
                         </div>
                     </div>
+                </div>
+            </section>
 
-                    <!-- Browser Notification Reminders Toggle -->
-                    <div class="reminder-optin-box">
-                        <div class="reminder-info">
-                            <strong>Daily Browser Pill Reminders (Opt-In):</strong>
-                            <p class="text-sm text-muted">Receive local browser reminders when it's time for your doses. Notifications do not replace caregiver supervision.</p>
+            <!-- FEATURE 1: MEDICATION REMINDERS & TIMERS -->
+            <section class="card reminder-card" id="medication-reminders-section" aria-labelledby="reminders-heading">
+                <div class="card-header flex-between">
+                    <div>
+                        <h3 id="reminders-heading">⏰ Medication Reminders & Timers</h3>
+                        <p class="text-sm text-muted" id="reminders-subheading">Set custom alarms and track scheduled doses. Live countdowns, gentle audio chimes, and browser alerts keep you on track.</p>
+                    </div>
+                    <div class="reminder-header-controls">
+                        <button id="btn-toggle-audio" class="btn btn-outline btn-sm" title="Toggle audio chime">
+                            <span id="audio-icon">🔔</span> <span id="audio-label">Sound Alert: ON</span>
+                        </button>
+                        <button id="btn-test-chime" class="btn btn-secondary btn-sm" title="Test audio alert sound">
+                            <span>🔊 Test Sound</span>
+                        </button>
+                        <button id="btn-toggle-browser-perm" class="btn btn-outline btn-sm">
+                            <span id="perm-label">🔔 Enable Notifications</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Clinical Safety Guard Banner -->
+                    <div class="reminder-safety-guard" role="note">
+                        <span class="guard-icon">⚠️</span>
+                        <div id="safety-guard-text">
+                            <strong>Clinical Safety Guard:</strong>
+                            CareBridge AI never invents medication alert times. If timing was not explicitly specified in the hospital discharge prescription, it is flagged as <em>"Timing not specified – confirm with your doctor"</em> and requires patient or doctor confirmation before setting an alert time.
                         </div>
-                        <div class="reminder-actions">
-                            <button id="btn-toggle-reminders" class="btn btn-outline btn-sm">Enable Browser Reminders</button>
-                            <button id="btn-test-reminder" class="btn btn-secondary btn-sm hidden">Test Notification</button>
+                    </div>
+
+                    <!-- Reminders Table -->
+                    <div class="table-responsive" style="margin-top: 1rem;">
+                        <table id="reminders-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th id="th-rem-med">Medicine & Dose</th>
+                                    <th id="th-rem-freq">Frequency</th>
+                                    <th id="th-rem-timing">Prescribed Timing</th>
+                                    <th id="th-rem-time">Reminder Time</th>
+                                    <th id="th-rem-countdown">Next Alarm Countdown</th>
+                                    <th id="th-rem-status">Status</th>
+                                    <th id="th-rem-actions" style="min-width: 220px;">Controls</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reminders-table-body">
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">Convert a discharge summary to load active medications and set reminders.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Action Footer -->
+                    <div class="reminder-action-footer flex-between" style="margin-top: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <div class="text-sm text-muted" id="reminders-summary-stats">
+                            <span>0 reminders active</span>
+                        </div>
+                        <div class="flex-gap" style="display: flex; gap: 0.5rem;">
+                            <button id="btn-add-custom-reminder" class="btn btn-outline btn-sm">+ Add Dose Time</button>
+                            <button id="btn-reset-reminders" class="btn btn-outline btn-sm" style="color: #dc2626;">Reset Reminders</button>
                         </div>
                     </div>
                 </div>
@@ -476,19 +619,23 @@
                         <h3>Family Fridge Care Sheet (Printable Companion)</h3>
                         <p class="text-muted">Pin this sheet on your refrigerator or bedside table for quick medication tracking.</p>
                     </div>
-                    <div class="fridge-print-controls">
+                    <div class="fridge-print-controls" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
                         <select id="fridge-lang-select" class="form-select form-select-sm" aria-label="Select fridge sheet language">
                             <option value="bilingual">Bilingual (English + Telugu)</option>
                             <option value="en">English Only</option>
                             <option value="te">Telugu Only (తెలుగు)</option>
                         </select>
-                        <button id="print-fridge-btn" class="btn btn-primary">
+                        <button id="btn-download-pdf" class="btn btn-primary" title="Download direct formatted A4 PDF file (No print dialog)">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="6 9 6 2 18 2 18 9"/>
-                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-                                <rect width="12" height="8" x="6" y="14"/>
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                             </svg>
-                            Print / Save PDF
+                            <span id="btn-pdf-text">Download PDF</span>
+                        </button>
+                        <button id="btn-download-image" class="btn btn-secondary" title="Download direct high-resolution PNG image">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                            </svg>
+                            <span id="btn-img-text">Download Image (PNG)</span>
                         </button>
                     </div>
                 </div>
@@ -561,6 +708,54 @@
             <p class="text-muted">Deterministic Clinical Extraction & Bilingual Patient Translation Engine. Core Motto: Faithfulness Above Fluency.</p>
         </div>
     </footer>
+
+    <!-- Medication Reminder Set / Edit Modal -->
+    <div id="reminder-modal" class="ocr-modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-reminder-title">
+        <div class="ocr-modal-content card" style="max-width: 520px;">
+            <div class="card-header flex-between">
+                <div>
+                    <h3 id="modal-reminder-title">Set Medication Reminder</h3>
+                    <p class="text-sm text-muted">Configure daily alarm time and dose label.</p>
+                </div>
+                <button type="button" id="btn-close-reminder-modal" class="btn btn-outline btn-sm" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="card-body">
+                <div id="modal-reminder-alert" class="alert-message alert-warning hidden" style="margin-bottom: 1rem; font-size: 0.88rem;">
+                    ⚠️ <strong>Timing not specified in prescription:</strong> Please confirm with your doctor or choose an alert time that aligns with your daily routine.
+                </div>
+                <form id="reminder-form" onsubmit="return false;">
+                    <input type="hidden" id="modal-reminder-id" value="" />
+                    <div class="form-group" style="margin-bottom: 0.75rem;">
+                        <label class="font-medium text-sm">Medicine Name:</label>
+                        <input type="text" id="modal-med-name" class="form-control" readonly style="background: #f1f5f9; font-weight: 600;" />
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0.75rem;">
+                        <label class="font-medium text-sm">Prescribed Dose & Frequency:</label>
+                        <input type="text" id="modal-med-dose-freq" class="form-control" readonly style="background: #f1f5f9;" />
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0.75rem;">
+                        <label for="modal-reminder-time" class="font-medium text-sm">Reminder Alert Time (HH:MM):</label>
+                        <input type="time" id="modal-reminder-time" class="form-control" required style="font-size: 1.1rem; padding: 0.5rem;" />
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0.75rem;">
+                        <label for="modal-reminder-slot" class="font-medium text-sm">Dose Label / Slot:</label>
+                        <select id="modal-reminder-slot" class="form-select">
+                            <option value="Morning">Morning Dose (ఉదయం)</option>
+                            <option value="Afternoon">Afternoon Dose (మధ్యాహ్నం)</option>
+                            <option value="Evening">Evening Dose (సాయంత్రం)</option>
+                            <option value="Night">Night / Bedtime Dose (రాత్రి)</option>
+                            <option value="As Needed">As Needed (అవసరమైనప్పుడు)</option>
+                            <option value="Custom">Custom Time (ప్రత్యేక సమయం)</option>
+                        </select>
+                    </div>
+                    <div class="modal-actions flex-end" style="margin-top: 1.25rem; display: flex; gap: 0.5rem;">
+                        <button type="button" id="btn-cancel-reminder-modal" class="btn btn-outline">Cancel</button>
+                        <button type="button" id="btn-save-reminder-modal" class="btn btn-primary">Save Reminder</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <script src="/static/app.js"></script>
 </body>

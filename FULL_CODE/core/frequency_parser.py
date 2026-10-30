@@ -99,15 +99,23 @@ class FrequencyParser:
     def parse_duration(self, text: str) -> str:
         """Extract explicit duration."""
         if not text:
-            return "continue"
+            return ""
         t_low = text.lower()
-        if "lifelong" in t_low or "long term" in t_low or "indefinitely" in t_low:
+        if "lifelong" in t_low or "life long" in t_low or "long term" in t_low or "indefinitely" in t_low:
             return "lifelong"
+        if "till next review" in t_low or "till review" in t_low or "until review" in t_low or "till next visit" in t_low or "until next visit" in t_low or "next visit" in t_low:
+            return "till review"
         if "continue" in t_low:
             return "continue"
-        if "till next review" in t_low or "till review" in t_low or "until review" in t_low:
-            return "till review"
-        match = re.search(r'(?:for\s+)?(\d+)\s*(days?|weeks?|months?|years?)', t_low)
+
+        # Shorthand fractions: 5/7, 2/52, 6/12
+        frac_m = re.search(r'\b(\d+)\s*/\s*(7|52|12)\b', t_low)
+        if frac_m:
+            n, base = int(frac_m.group(1)), frac_m.group(2)
+            days = n * (1 if base == "7" else 7 if base == "52" else 30)
+            return f"for {days} days"
+
+        match = re.search(r'(?:for\s+|x\s*)?(\d+)\s*(days?|weeks?|months?|years?)', t_low)
         if match:
             num, unit = match.group(1), match.group(2)
             return f"for {num} {unit}"

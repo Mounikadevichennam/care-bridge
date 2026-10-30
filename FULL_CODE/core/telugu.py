@@ -227,3 +227,101 @@ class TeluguTranslationEngine:
             return 0.0
         return round(telugu_chars / total_letters, 4)
 
+    def translate_structured(self, data: Any) -> Dict[str, Any]:
+        """Translate structured care plan entities into bilingual Telugu metadata.
+
+        Preserves Latin medicine names, dosages, frequencies, and dates intact.
+        """
+        # Handle dataclass or dict
+        if hasattr(data, "medicines"):
+            raw_meds = data.medicines
+            raw_stops = getattr(data, "stop_medicines", []) or []
+            raw_fus = getattr(data, "follow_ups", []) or []
+            raw_warns = getattr(data, "warning_signs", []) or []
+            raw_diet = getattr(data, "diet", []) or []
+            raw_act = getattr(data, "activity", []) or []
+        elif isinstance(data, dict):
+            raw_meds = data.get("medicines", []) or []
+            raw_stops = data.get("stop_medicines", []) or []
+            raw_fus = data.get("follow_ups", []) or []
+            raw_warns = data.get("warning_signs", []) or []
+            raw_diet = data.get("diet", []) or []
+            raw_act = data.get("activity", []) or []
+        else:
+            raw_meds, raw_stops, raw_fus, raw_warns, raw_diet, raw_act = [], [], [], [], [], []
+
+        # Process medicines
+        tel_meds = []
+        for m in raw_meds:
+            if hasattr(m, "name"):
+                name = m.name
+                dose = m.dose
+                freq = m.frequency
+                timing = m.timing
+                dur = m.duration
+            else:
+                name = m.get("name", "")
+                dose = m.get("dose", "")
+                freq = m.get("frequency", "")
+                timing = m.get("timing", "")
+                dur = m.get("duration", "")
+
+            freq_te = self._translate_frequency(freq)
+            timing_te = self._translate_timing(timing)
+            dur_te = self._translate_duration(dur)
+            how_te = f"{freq_te}, {timing_te}. క్రమం తప్పకుండా మంచి నీటితో తీసుకోండి."
+
+            tel_meds.append({
+                "name": name,
+                "dose": dose,
+                "frequency": freq,
+                "frequency_te": freq_te,
+                "timing": timing,
+                "timing_te": timing_te,
+                "duration": dur,
+                "duration_te": dur_te,
+                "how_to_take_plain": how_te,
+                "how_to_take_plain_te": how_te,
+            })
+
+        # Process stopped medicines
+        tel_stops = []
+        for sm in raw_stops:
+            s_name = sm.get("name", "") if isinstance(sm, dict) else getattr(sm, "name", "")
+            s_reason = sm.get("reason", "Discontinued") if isinstance(sm, dict) else getattr(sm, "reason", "Discontinued")
+            tel_stops.append({
+                "name": s_name,
+                "reason": s_reason,
+                "instruction_te": f"🛑 {s_name}: ఈ మందును వాడటం వెంటనే ఆపండి ({s_reason}). పొరపాటున కూడా మళ్లీ వేసుకోవద్దు."
+            })
+
+        # Process follow-ups
+        tel_fus = []
+        for fu in raw_fus:
+            f_date = fu.get("date", "") if isinstance(fu, dict) else getattr(fu, "date", "")
+            f_who = fu.get("with_whom", "") if isinstance(fu, dict) else getattr(fu, "with_whom", "")
+            f_purp = fu.get("purpose", "") if isinstance(fu, dict) else getattr(fu, "purpose", "")
+            tel_fus.append({
+                "date": f_date,
+                "with_whom": f_who,
+                "purpose": f_purp,
+                "instruction_te": f"📅 {f_date} న {f_who} వద్దకు {f_purp} కొరకు వెళ్ళి పరీక్ష చేయించుకోండి."
+            })
+
+        # Process warning signs, diet, activity
+        tel_warns = [self._translate_warning(w) for w in raw_warns]
+        tel_diet = [self._translate_diet(d) for d in raw_diet]
+        tel_act = [self._translate_activity(a) for a in raw_act]
+
+        return {
+            "lang": "te",
+            "title": "కేర్‌బ్రిడ్జ్ రోగి డిశ్చార్జ్ సంరక్షణ ప్రణాళిక",
+            "subtitle": "ఆసుపత్రి డిశ్చార్జ్ అనంతర గృహ సంరక్షణ & ఔషధ మార్గదర్శిని",
+            "medicines": tel_meds,
+            "stop_medicines": tel_stops,
+            "follow_ups": tel_fus,
+            "warning_signs": tel_warns,
+            "diet": tel_diet,
+            "activity": tel_act,
+            "disclaimer": "ముఖ్య గమనిక: ఇది రోగులకు సులభంగా అర్థమయ్యే భాషలో అందించిన సమాచార మార్గదర్శిని. ఔషధాల మోతాదులు మరియు కాలపరిమితులు మార్చబడలేదు (Faithfulness Above Fluency). ఏదైనా అత్యవసర పరిస్థితి తలెత్తితే వెంటనే మీ వైద్యుడిని లేదా సమీప ఆసుపత్రిని సంప్రదించండి."
+        }

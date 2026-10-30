@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Login — CareBridge AI Clinical Portal</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/doctor.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="doctor-portal-body">
+    <div class="doctor-login-wrapper">
+        <div class="doctor-login-card">
+            <div class="login-brand-header">
+                <div class="login-icon-box">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                        <path d="M12 5v14"/>
+                        <path d="M5 12h14"/>
+                    </svg>
+                </div>
+                <h1 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 0.35rem 0;">Doctor Clinical Portal</h1>
+                <p class="text-muted text-sm" style="margin: 0;">CareBridge AI — Physician Review & Sign-Off</p>
+            </div>
+
+            {% if error %}
+            <div class="alert-message alert-error" role="alert">
+                <strong>Authentication Failed:</strong> {{ error }}
+            </div>
+            {% endif %}
+
+            {% if message %}
+            <div class="alert-message alert-success" role="alert">
+                {{ message }}
+            </div>
+            {% endif %}
+
+            <form method="POST" action="/doctor/login">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="{{ next_url or '' }}">
+
+                <div class="form-field">
+                    <label for="doctor-email">Hospital Email ID</label>
+                    <input type="email" id="doctor-email" name="email" class="form-control-input" placeholder="e.g. dr.siddiqui@chandrapuri.org" required autofocus value="{{ email or '' }}">
+                </div>
+
+                <div class="form-field">
+                    <label for="doctor-password">Password</label>
+                    <input type="password" id="doctor-password" name="password" class="form-control-input" placeholder="Enter your secure password" required>
+                </div>
+
+                <button type="submit" class="btn-login-submit">
+                    Sign In to Doctor Portal &rarr;
+                </button>
+            </form>
+
+            <div class="demo-credentials-box">
+                <div style="font-weight: 600; margin-bottom: 0.25rem;">🩺 Default Reviewer Accounts:</div>
+                <div><strong>Dr. Farah Siddiqui:</strong> <code>dr.siddiqui@chandrapuri.org</code></div>
+                <div><strong>Dr. Rajesh Patel:</strong> <code>dr.patel@chandrapuri.org</code></div>
+                <div><strong>Password:</strong> <code>DoctorCare2026!</code></div>
+                <div style="margin-top: 0.4rem; font-size: 0.75rem; color: #64748b;">
+                    <em>Passwords are hashed with PBKDF2/SHA-256. All access is logged to the clinical audit trail.</em>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <a href="/" style="font-size: 0.85rem; color: var(--doc-teal); text-decoration: none; font-weight: 600;">
+                    &larr; Return to Patient Portal
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
