@@ -91,15 +91,8 @@ from core.database import (
 )
 
 # Canonical organizer data directory
-try:
-    DATA_DIR = get_data_dir()
-    logger.info("Organizer dataset loaded from: %s", DATA_DIR)
-except FileNotFoundError:
-    DATA_DIR = Path(__file__).resolve().parent / "data"
-    logger.warning(
-        "Organizer dataset unavailable. Using built-in clinical references. "
-        "Sample summaries will be unavailable."
-    )
+DATA_DIR = get_data_dir()
+
 # Initialize SQLite database schema and default doctors
 init_db()
 
