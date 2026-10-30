@@ -1,0 +1,36 @@
+# Python
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Temporary files
+*.log
+temp/
+tmp/
+uploads_temp/
+node_modules/
+
+# Organizer dataset - never upload
+data/
+**/data/
+summaries/
+**/summaries/
+
+# Local backups and evaluation outputs
+_backups/
+score.json
+dev_official_score.json
+FULL_CODE/evaluation/
+
+# Official submission - include this
+!submission/
+!submission/H2_predictions.jsonl

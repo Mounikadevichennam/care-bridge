@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareBridge AI — Clearer Care After Discharge</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+        <div class="container header-container">
+            <div class="brand">
+                <div class="brand-logo" aria-hidden="true">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                        <path d="M12 5v14"/>
+                        <path d="M5 12h14"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="brand-title">CareBridge AI</h1>
+                    <p class="brand-tagline">Clearer care after discharge.</p>
+                </div>
+            </div>
+
+            <!-- Header Quick Tools & Accessibility Controls -->
+            <div class="header-controls">
+                <div class="accessibility-bar" role="group" aria-label="Accessibility options">
+                    <button id="btn-toggle-large-text" class="btn-tool" title="Toggle Large Text Mode (A+)" aria-label="Toggle Large Text">
+                        <strong>A+</strong> Large Text
+                    </button>
+                    <button id="btn-toggle-contrast" class="btn-tool" title="Toggle High Contrast Mode" aria-label="Toggle High Contrast">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20Z"/></svg>
+                        Contrast
+                    </button>
+                    <button id="btn-toggle-family-view" class="btn-tool btn-tool-accent" title="Switch to Family Caregiver View" aria-label="Toggle Family View">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        Family View
+                    </button>
+                </div>
+                <div class="header-badges">
+                    <span class="badge badge-accent">TalentAP Mega Hackathon 2026 | H2</span>
+                    <span class="badge badge-outline">Bilingual: English + Telugu</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Clinical Status & Safety Notice -->
+    <div class="container notice-container">
+        <!-- Safety Banner -->
+        <div class="safety-banner" role="alert">
+            <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <div>
+                <strong>Faithfulness-First Clinical Assistance Tool:</strong>
+                CareBridge AI translates hospital discharge instructions faithfully into everyday language without altering prescribed doses, frequencies, or dates. It does not replace professional clinical judgment. Always consult your attending doctor for emergency medical conditions.
+            </div>
+        </div>
+
+        <!-- Doctor Review Workflow Bar -->
+        <div class="doctor-workflow-bar">
+            <div class="workflow-left">
+                <span class="workflow-label">Physician Chart Sign-Off:</span>
+                <span id="workflow-badge" class="badge badge-draft">Doctor Review: PENDING</span>
+                <span class="text-sm text-muted">| Clinical protocol requires physician sign-off before formal care plan distribution.</span>
+            </div>
+            <div class="workflow-actions">
+                <select id="workflow-status-select" class="form-select form-select-sm" aria-label="Select Clinical Review State">
+                    <option value="pending" selected>State: Review PENDING</option>
+                    <option value="changes_requested">State: CHANGES REQUESTED</option>
+                    <option value="approved">State: APPROVED by Doctor</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <main class="container main-content">
+        <!-- Document Input Section -->
+        <section class="card input-card" aria-labelledby="section-input-heading">
+            <div class="card-header">
+                <div>
+                    <h2 id="section-input-heading">1. Discharge Summary Input (Text, PDF, Images)</h2>
+                    <p class="text-muted text-sm">Upload hospital discharge papers, scanned prescriptions, PDF summaries, or paste text directly.</p>
+                </div>
+                <div class="quick-actions">
+                    <button id="demo-valid-btn" class="btn btn-secondary btn-sm" title="Load real diabetic ketoacidosis (DKA / T2DM) discharge note from organizer dataset">Load Diabetic Demo</button>
+                    <button id="demo-tamper-btn" class="btn btn-secondary btn-sm" title="Test audit layer with safety check">Test Safety Audit</button>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <!-- Upload Dropzone & Controls -->
+                <div class="input-selection-grid">
+                    <!-- Preset Selector -->
+                    <div class="input-group">
+                        <label for="sample-selector" class="font-medium">Preset Synthetic Clinical Cases:</label>
+                        <select id="sample-selector" class="form-select">
+                            <option value="">-- Select a synthetic discharge note --</option>
+                            {% for s in samples %}
+                            <option value="{{ s.id }}">{{ s.id }} ({{ s.preview }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- File Upload Button & Drop Area -->
+                    <div class="input-group">
+                        <label for="file-upload" class="font-medium">Upload File (TXT, PDF, JPG, PNG):</label>
+                        <div class="upload-trigger-row">
+                            <label for="file-upload" class="btn btn-outline upload-btn-styled" tabindex="0">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                                <span>Choose Document or Image</span>
+                            </label>
+                            <input type="file" id="file-upload" accept=".txt,.pdf,.png,.jpg,.jpeg" style="display: none;">
+                            <span id="upload-filename-display" class="upload-filename text-muted text-sm">No file chosen</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Text Area Input -->
+                <div class="textarea-wrapper">
+                    <label for="summary-input" class="font-medium text-sm">Discharge Summary Content:</label>
+                    <textarea id="summary-input" class="summary-textarea" placeholder="Paste doctor's discharge summary, medication orders, or clinical notes here..."></textarea>
+                </div>
+
+                <!-- Input Footer Actions -->
+                <div class="action-footer">
+                    <button id="clear-btn" class="btn btn-outline">Clear Input</button>
+                    <button id="process-btn" class="btn btn-primary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                        </svg>
+                        Convert to Patient Care Plan
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Document Review & Confirmation Dialog (For PDF/OCR uploads) -->
+        <div id="ocr-review-modal" class="ocr-modal hidden" role="dialog" aria-modal="true" aria-labelledby="ocr-review-title">
+            <div class="ocr-modal-content card">
+                <div class="card-header flex-between">
+                    <div>
+                        <h3 id="ocr-review-title">Review Extracted Document Text</h3>
+                        <p class="text-sm text-muted">Verify the extracted content before generating the care plan. You can edit any unclear text.</p>
+                    </div>
+                    <span id="ocr-method-badge" class="badge badge-accent">OCR Method</span>
+                </div>
+                <div class="card-body">
+                    <div id="ocr-warnings-box" class="ocr-warnings-box hidden">
+                        <strong>⚠️ Review Notice:</strong>
+                        <ul id="ocr-warnings-list"></ul>
+                    </div>
+                    <div class="form-group">
+                        <label for="ocr-preview-textarea" class="font-medium text-sm">Extracted Text (Editable for Corrections):</label>
+                        <textarea id="ocr-preview-textarea" class="ocr-preview-textarea"></textarea>
+                    </div>
+                    <div class="modal-actions flex-end">
+                        <button id="btn-cancel-ocr" class="btn btn-outline">Cancel</button>
+                        <button id="btn-confirm-ocr" class="btn btn-primary">Confirm Text & Generate Care Plan</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processing Loading Indicator -->
+        <div id="loading-spinner" class="loading-container hidden" aria-live="polite">
+            <div class="spinner"></div>
+            <p>Auditing clinical abbreviations, resolving medication dosages, and compiling bilingual care plan...</p>
+        </div>
+
+        <!-- Results Area Container -->
+        <div id="results-area" class="results-area hidden">
+            <!-- Decoupled Verification & Clinical Review Status Banner -->
+            <section class="patient-verification-card" aria-live="polite">
+                <div class="verification-content-wrapper">
+                    <div class="verification-icon-wrap" id="verification-icon-box">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
+                    <div class="verification-text-wrap">
+                        <div class="verification-badge-row">
+                            <span id="patient-status-title" class="status-main-text">TECHNICAL VALIDATION: PASS</span>
+                            <span id="tech-validation-tag" class="verification-tag">Clinical Grounding Audit</span>
+                            <span id="doctor-review-badge-status" class="badge badge-draft" style="margin-left: auto;">Doctor Review: PENDING</span>
+                        </div>
+                        <p id="patient-status-desc" class="verification-sub-text">
+                            The generated care plan was checked against the source discharge summary.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Faithfulness Checklist Indicators -->
+                <div class="faithfulness-checks-summary">
+                    <div class="check-summary-pill" id="check-meds-pill">
+                        <span class="check-pill-icon">✓</span>
+                        <span class="check-pill-label">Active Prescriptions Grounded</span>
+                    </div>
+                    <div class="check-summary-pill" id="check-stops-pill">
+                        <span class="check-pill-icon">✓</span>
+                        <span class="check-pill-label">Discontinued Drugs Isolated</span>
+                    </div>
+                    <div class="check-summary-pill" id="check-doses-pill">
+                        <span class="check-pill-icon">✓</span>
+                        <span class="check-pill-label">Dosages Preserved Verbatim</span>
+                    </div>
+                    <div class="check-summary-pill" id="check-dates-pill">
+                        <span class="check-pill-icon">✓</span>
+                        <span class="check-pill-label">Follow-up Dates Verified</span>
+                    </div>
+                </div>
+
+                <!-- Collapsible Technical Verification Audit (For judges & reviewers) -->
+                <details class="technical-audit-details">
+                    <summary class="audit-summary-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                        <span>View Technical Verification Details (Judges & Reviewers)</span>
+                    </summary>
+                    <div class="audit-table-wrapper">
+                        <table id="validation-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Clinical Check</th>
+                                    <th>Source Reference</th>
+                                    <th>Status</th>
+                                    <th>Audit Explanation</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </details>
+            </section>
+
+            <!-- Patient-Friendly Daily Medication Schedule -->
+            <section class="card" aria-labelledby="schedule-heading">
+                <div class="card-header flex-between">
+                    <div>
+                        <h3 id="schedule-heading">Daily Medication Schedule</h3>
+                        <p class="text-sm text-muted">Organized strictly by explicit prescription timing (Morning, Afternoon, Night, As Needed, or Unspecified).</p>
+                    </div>
+                    <span class="badge badge-accent">No Guessing Policy</span>
+                </div>
+                <div class="card-body">
+                    <div class="schedule-slots-grid">
+                        <!-- Morning Slot -->
+                        <div class="slot-column slot-morning">
+                            <div class="slot-header">
+                                <span class="slot-icon">🌅</span>
+                                <h4>Morning</h4>
+                            </div>
+                            <div id="slot-morning-items" class="slot-items"></div>
+                        </div>
+
+                        <!-- Afternoon Slot -->
+                        <div class="slot-column slot-afternoon">
+                            <div class="slot-header">
+                                <span class="slot-icon">☀️</span>
+                                <h4>Afternoon</h4>
+                            </div>
+                            <div id="slot-afternoon-items" class="slot-items"></div>
+                        </div>
+
+                        <!-- Night Slot -->
+                        <div class="slot-column slot-night">
+                            <div class="slot-header">
+                                <span class="slot-icon">🌙</span>
+                                <h4>Night</h4>
+                            </div>
+                            <div id="slot-night-items" class="slot-items"></div>
+                        </div>
+
+                        <!-- As Needed (SOS) Slot -->
+                        <div class="slot-column slot-sos">
+                            <div class="slot-header">
+                                <span class="slot-icon">💊</span>
+                                <h4>As Needed (SOS)</h4>
+                            </div>
+                            <div id="slot-sos-items" class="slot-items"></div>
+                        </div>
+
+                        <!-- Timing Not Specified Slot -->
+                        <div id="slot-unspecified-col" class="slot-column slot-unspecified hidden">
+                            <div class="slot-header">
+                                <span class="slot-icon">⏱️</span>
+                                <h4>Timing Not Specified</h4>
+                            </div>
+                            <div id="slot-unspecified-items" class="slot-items"></div>
+                        </div>
+                    </div>
+
+                    <!-- Browser Notification Reminders Toggle -->
+                    <div class="reminder-optin-box">
+                        <div class="reminder-info">
+                            <strong>Daily Browser Pill Reminders (Opt-In):</strong>
+                            <p class="text-sm text-muted">Receive local browser reminders when it's time for your doses. Notifications do not replace caregiver supervision.</p>
+                        </div>
+                        <div class="reminder-actions">
+                            <button id="btn-toggle-reminders" class="btn btn-outline btn-sm">Enable Browser Reminders</button>
+                            <button id="btn-test-reminder" class="btn btn-secondary btn-sm hidden">Test Notification</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Structured Extracted Facts Grid -->
+            <div class="grid-2-col">
+                <!-- Active Medicines Table -->
+                <section class="card">
+                    <div class="card-header">
+                        <h3>Active Prescribed Medications</h3>
+                        <span class="badge badge-accent">Preserved Names & Doses</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="medicines-table" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Medicine</th>
+                                        <th>Dose</th>
+                                        <th>Frequency</th>
+                                        <th>Timing</th>
+                                        <th>Duration</th>
+                                        <th>How to Take</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Stopped Medicines & Follow-ups -->
+                <div class="vertical-cards">
+                    <section class="card">
+                        <div class="card-header">
+                            <h3>Discontinued / Stopped Medications</h3>
+                            <span class="badge badge-danger">Strictly Discontinued</span>
+                        </div>
+                        <div class="card-body">
+                            <div id="stop-medicines-list" class="stop-pills-container"></div>
+                        </div>
+                    </section>
+
+                    <section class="card">
+                        <div class="card-header">
+                            <h3>Scheduled Follow-up Appointments</h3>
+                            <span class="badge badge-primary">Clinical Review</span>
+                        </div>
+                        <div class="card-body">
+                            <table id="followup-table" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Department / Doctor</th>
+                                        <th>Purpose</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Warning Signs, Diet, and Activity Guidance -->
+            <div class="grid-3-col">
+                <section class="card alert-card-subtle">
+                    <div class="card-header">
+                        <h4>Warning Signs (Seek Urgent Care)</h4>
+                    </div>
+                    <div class="card-body">
+                        <ul id="warnings-list" class="styled-list"></ul>
+                    </div>
+                </section>
+                <section class="card">
+                    <div class="card-header">
+                        <h4>Dietary Guidance</h4>
+                    </div>
+                    <div class="card-body">
+                        <ul id="diet-list" class="styled-list"></ul>
+                    </div>
+                </section>
+                <section class="card">
+                    <div class="card-header">
+                        <h4>Activity & Recovery Guidance</h4>
+                    </div>
+                    <div class="card-body">
+                        <ul id="activity-list" class="styled-list"></ul>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Bilingual Generated Care Plans -->
+            <div class="grid-2-col">
+                <!-- English Narrative Plan -->
+                <section class="card">
+                    <div class="card-header flex-between">
+                        <h3>English Patient Care Plan</h3>
+                        <div class="readability-badge-wrap">
+                            <span class="badge badge-outline">Flesch-Kincaid Grade: <strong id="readability-grade">6.5</strong></span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="readability-meta">
+                            <span id="readability-desc" class="font-bold text-teal">Class 8 Target</span>
+                            <span id="readability-expl" class="text-muted text-sm"></span>
+                        </div>
+                        <pre id="english-care-plan" class="care-plan-text"></pre>
+                    </div>
+                </section>
+
+                <!-- Telugu Translation Plan -->
+                <section class="card">
+                    <div class="card-header flex-between">
+                        <h3>తెలుగు సంరక్షణ ప్రణాళిక (Telugu Care Plan)</h3>
+                        <span class="badge badge-accent">Authentic Script (te)</span>
+                    </div>
+                    <div class="card-body">
+                        <pre id="telugu-care-plan" class="care-plan-text telugu-text"></pre>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Family-Friendly Caregiver View Container (Toggleable) -->
+            <section id="family-view-section" class="card family-view-card hidden">
+                <div class="card-header flex-between">
+                    <div>
+                        <h2>👨‍👩‍👧 Family & Caregiver View</h2>
+                        <p class="text-muted">High-legibility layout designed for family members and elderly caregivers.</p>
+                    </div>
+                    <div class="language-toggles">
+                        <button id="family-lang-en" class="btn btn-secondary btn-sm active">English</button>
+                        <button id="family-lang-te" class="btn btn-outline btn-sm">తెలుగు (Telugu)</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="family-content-display" class="family-content-area"></div>
+                </div>
+            </section>
+
+            <!-- Source Comparison & Traceability Inspector -->
+            <section class="card comparison-card">
+                <div class="card-header flex-between">
+                    <div>
+                        <h3>Clinical Source Comparison & Traceability</h3>
+                        <p class="text-sm text-muted">Verify how extracted facts correspond to the original discharge summary.</p>
+                    </div>
+                    <span class="badge badge-outline">Traceability Guarantee</span>
+                </div>
+                <div class="card-body">
+                    <div class="comparison-grid">
+                        <div class="comparison-pane">
+                            <h4>Original Discharge Text</h4>
+                            <pre id="comparison-source-text" class="source-inspect-box"></pre>
+                        </div>
+                        <div class="comparison-pane">
+                            <h4>Structured Clinical Verification</h4>
+                            <div id="comparison-facts-box" class="facts-inspect-box"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Printable Family Fridge Sheet (Multi-page ready) -->
+            <section class="card fridge-preview-card">
+                <div class="card-header flex-between">
+                    <div>
+                        <h3>Family Fridge Care Sheet (Printable Companion)</h3>
+                        <p class="text-muted">Pin this sheet on your refrigerator or bedside table for quick medication tracking.</p>
+                    </div>
+                    <div class="fridge-print-controls">
+                        <select id="fridge-lang-select" class="form-select form-select-sm" aria-label="Select fridge sheet language">
+                            <option value="bilingual">Bilingual (English + Telugu)</option>
+                            <option value="en">English Only</option>
+                            <option value="te">Telugu Only (తెలుగు)</option>
+                        </select>
+                        <button id="print-fridge-btn" class="btn btn-primary">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 6 2 18 2 18 9"/>
+                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                                <rect width="12" height="8" x="6" y="14"/>
+                            </svg>
+                            Print / Save PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="fridge-printable-sheet" class="fridge-sheet">
+                        <div class="fridge-header">
+                            <div>
+                                <h2>CAREBRIDGE DISCHARGE COMPANION</h2>
+                                <p>Essential Home Care & Medication Schedule</p>
+                            </div>
+                            <div class="fridge-badge">PATIENT COPY</div>
+                        </div>
+
+                        <div class="fridge-section">
+                            <h4>DAILY MEDICATIONS SCHEDULE</h4>
+                            <div id="fridge-medicines-list" class="fridge-med-grid"></div>
+                        </div>
+
+                        <div class="fridge-row-split">
+                            <div class="fridge-section">
+                                <h4>FOLLOW-UP CLINIC DATES</h4>
+                                <ul id="fridge-followup-list" class="fridge-list"></ul>
+                            </div>
+                            <div class="fridge-section">
+                                <h4>EMERGENCY WARNING SIGNS (CALL DOCTOR IMMEDIATELY)</h4>
+                                <ul id="fridge-warnings-list" class="fridge-list text-danger"></ul>
+                            </div>
+                        </div>
+
+                        <div class="fridge-row-split">
+                            <div class="fridge-section">
+                                <h4>DIETARY GUIDANCE</h4>
+                                <ul id="fridge-diet-list" class="fridge-list"></ul>
+                            </div>
+                            <div class="fridge-section">
+                                <h4>ACTIVITY & REST</h4>
+                                <ul id="fridge-activity-list" class="fridge-list"></ul>
+                            </div>
+                        </div>
+
+                        <div class="fridge-footer">
+                            <p><strong>Safety Reminder:</strong> Keep this sheet where family members can see it. If severe symptoms occur, proceed to the nearest emergency hospital.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Privacy-Conscious Session Care Plan History -->
+            <section class="card history-card">
+                <div class="card-header flex-between">
+                    <div>
+                        <h3>Recent Session Care Plans</h3>
+                        <p class="text-sm text-muted">Stored temporarily in your browser session for easy retrieval. Clear whenever needed.</p>
+                    </div>
+                    <button id="btn-clear-history" class="btn btn-outline btn-sm">Clear History</button>
+                </div>
+                <div class="card-body">
+                    <ul id="session-history-list" class="history-list">
+                        <li class="text-muted text-sm">No previous care plans in this session yet.</li>
+                    </ul>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- App Footer -->
+    <footer class="app-footer">
+        <div class="container footer-container">
+            <p>CareBridge AI — TalentAP Mega Hackathon 2026 | Problem Statement H2 Healthcare.</p>
+            <p class="text-muted">Deterministic Clinical Extraction & Bilingual Patient Translation Engine. Core Motto: Faithfulness Above Fluency.</p>
+        </div>
+    </footer>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
